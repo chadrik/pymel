@@ -26,46 +26,6 @@ _version = pymel.__version__
 # absolute, like shown here.
 #sys.path.append(os.path.abspath('.'))
 
-
-# Napoleon settings
-# -----------------
-
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = True
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = False
-napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
-napoleon_use_param = False
-napoleon_use_rtype = True
-
-# fix for pymel.core.general.SCENE erroring during inspection by napoleon
-SKIP = {'_the_instance'}
-
-# must monkeypatch sphinxcontrib.napoleon because app.connect places our callback after napoleon's
-import sphinxcontrib.napoleon
-_orig_skip_member = sphinxcontrib.napoleon._skip_member
-
-import sys
-def skip_unsafe(app, what, name, obj, skip, options):
-    if name in SKIP:
-        return False
-    else:
-        try:
-            return _orig_skip_member(app, what, name, obj, skip, options)
-        except:
-            print "Errored on attribute %s of %s %s" % (name, what, obj)
-            raise
-
-sphinxcontrib.napoleon._skip_member = skip_unsafe
-
-# def setup(app):
-#     import pprint
-#     pprint.pprint(app._listeners['autodoc-skip-member'])
-#     app.connect('autodoc-skip-member', skip_unsafe)
-
 # General configuration
 # ---------------------
 
@@ -77,11 +37,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.graphviz',
-    'sphinxcontrib.napoleon',
 ]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['../templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -143,9 +100,13 @@ pygments_style = 'sphinx'
 # Options for HTML output
 # -----------------------
 
-import sphinx_rtd_theme
-html_theme = "sphinx_rtd_theme"
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+if not os.environ.get('READTHEDOCS', None) == 'True':
+    import sphinx_rtd_theme
+    html_theme = "sphinx_rtd_theme"
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+    # Add any paths that contain templates here, relative to this directory.
+    templates_path = ['../templates']
 
 # html_theme = 'nature'
 

@@ -4,20 +4,25 @@ import glob
 import shutil
 import datetime
 
-assert 'pymel' not in sys.modules or 'PYMEL_INCLUDE_EXAMPLES' in os.environ, "to generate docs PYMEL_INCLUDE_EXAMPLES env var must be set before pymel is imported"
+assert 'pymel' not in sys.modules or 'PYMEL_INCLUDE_EXAMPLES' in os.environ, \
+        "to generate docs PYMEL_INCLUDE_EXAMPLES env var must be set before pymel is imported"
+
+pymel_root = os.path.dirname(os.path.dirname(sys.modules[__name__].__file__))
+docs_repo = os.path.join(pymel_root, 'pymel-docs')
+stubdir = os.path.join(docs_repo, 'lib')
+
+docsdir = os.path.join(pymel_root, 'docs')
+
+print stubdir
+
+use_stubs = __name__ == '__main__'
 
 # remember, the processed command examples are not version specific. you must
 # run cmdcache.fixCodeExamples() to bring processed examples in from the raw
 # version-specific example caches
 os.environ['PYMEL_INCLUDE_EXAMPLES'] = 'True'
 
-pymel_root = os.path.dirname(os.path.dirname(sys.modules[__name__].__file__))
-docsdir = os.path.join(pymel_root, 'docs')
-stubdir = os.path.join(pymel_root, 'extras', 'completion', 'py')
-
-useStubs = False
-
-if useStubs:
+if use_stubs:
     sys.path.insert(0, stubdir)
     import pymel
     print pymel.__file__
@@ -27,16 +32,15 @@ else:
     from pymel.core.uitypes import *
     from pymel.core.nodetypes import *
 
-version = pymel.__version__.rsplit('.',1)[0]
+
 SOURCE = 'source'
 BUILD_ROOT = 'build'
-BUILD = os.path.join(BUILD_ROOT, version)
+version = pymel.__version__.rsplit('.',1)[0]
 sourcedir = os.path.join(docsdir, SOURCE)
 gendir = os.path.join(sourcedir, 'generated')
 buildrootdir = os.path.join(docsdir, BUILD_ROOT)
-builddir = os.path.join(docsdir, BUILD)
 
-from pymel.internal.cmdcache import fixCodeExamples
+# from pymel.internal.cmdcache import fixCodeExamples
 
 def generate(clean=True):
     "delete build and generated directories and generate a top-level documentation source file for each module."
@@ -88,7 +92,7 @@ def build(clean=True, **kwargs):
     if not os.path.isdir(gendir):
         generate()
 
-    os.chdir( docsdir )
+    os.chdir(docsdir)
     if clean:
         clean_build()
 
@@ -110,7 +114,24 @@ def build(clean=True, **kwargs):
         opts.append( key.strip() + '=' + value.strip() )
     opts.append('-P')
     opts.append(SOURCE)
-    opts.append(BUILD)
+    opts.append(os.path.join(BUILD_ROOT, version))
     sphinx_build(opts)
     print "...done building %s - %s" % (docsdir, datetime.datetime.now())
 
+def make_doc_stubs():
+    """create pymel stubs with full examaples"""
+    import maintenance.stubs as stubs
+    if os.path.exists(stubdir):
+        shutil.rmtree(stubdir)
+    for module in ('pymel', 'maya', 'PySide', 'shiboken'):
+        stubs.makestubs(module, outputdir=stubdir)
+
+def copy_source():
+    destdir = os.path.join(docs_repo, 'docs')
+    if os.path.exists(destdir):
+        shutil.rmtree(destdir)
+    shutil.copytree(sourcedir, destdir)
+
+if __name__ == '__main__':
+    generate()
+    build()

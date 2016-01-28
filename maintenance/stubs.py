@@ -1187,14 +1187,62 @@ def packagestubs(packagename, outputdir='', extensions=('py', 'pypredef', 'pi'),
                 f.write( contents )
 
 
+def makestubs(packagename, outputdir='', exclude=None):
+    import pymel.util as util
+
+    def get_python_file(modname, ispkg):
+        curfile = os.path.join(outputdir, *modname.split('.') )
+        if ispkg:
+            curfile = os.path.join(curfile, '__init__' )
+
+        curfile = curfile + '.py'
+        return curfile
+
+    packagemod = __import__(packagename, globals(), locals(), ['dummy'], -1)
+    # first, check to see if the given package is not a 'top level' package...and
+    # if so, create any parent package dirs/__init__.py
+    if '.' in packagename:
+        parts = packagename.split('.')
+        # if, ie, our packagename is 'my.long.sub.package', this will give us
+        #   my
+        #   my.long
+        #   my.long.sub
+        for i in xrange(1, len(parts)):
+            parent_package = '.'.join(parts[:i])
+            parent_file = get_python_file(parent_package, True)
+            parent_dir = os.path.dirname(parent_file)
+            if not os.path.isdir(parent_dir):
+                os.makedirs(parent_dir)
+            if not os.path.isfile(parent_file):
+                print "making empty %s" % parent_file
+                # this will "touch" the file - ie, create an empty one
+                with open(parent_file, 'a'):
+                    pass
+
+    for modname, mod, ispkg in util.subpackages(packagemod):
+        print modname, ":"
+        if not exclude or not re.match(exclude, modname):
+            contents = stubs.docmodule(mod)
+        else:
+            contents = ''
+
+        curfile = get_python_file(modname, ispkg)
+        curdir = os.path.dirname(curfile)
+        if not os.path.isdir(curdir):
+            os.makedirs(curdir)
+        print "\t ...writing %s" % curfile
+        with open(curfile, 'w') as f:
+            f.write(contents)
+
 def pymelstubs(extensions=('py', 'pypredef', 'pi'), modules=('pymel', 'maya', 'PySide', 'shiboken'),
-               pyRealUtil=False):
+               pyRealUtil=False, outputdir=None):
     """ Builds pymel stub files for autocompletion.
 
     Can build Python Interface files (pi) with extension='pi' for IDEs like wing."""
 
-    pymeldir = os.path.dirname( os.path.dirname( sys.modules[__name__].__file__) )
-    outputdir = os.path.join(pymeldir, 'extras', 'completion')
+    if outputdir is None:
+        pymeldir = os.path.dirname( os.path.dirname( sys.modules[__name__].__file__) )
+        outputdir = os.path.join(pymeldir, 'extras', 'completion')
     print "Stub output dir:", outputdir
     if not os.path.exists(outputdir):
         os.makedirs(outputdir)
